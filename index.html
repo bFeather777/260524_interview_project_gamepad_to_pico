@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PS4 手把無線通訊測試中台</title>
+    <title>PS4 手把無線通訊測試平台</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>PS4 手把控制中台 (Web 端全無線整合)</h1>
+    <h1>PS4 手把控制平台 (Web 端全無線整合)</h1>
     <p>請先確保 PS4 手把已與 Mac 連線，且 Pico-D 藍牙已啟動。</p>
     
     <button id="connectBtn">1. 偵測並連接手把</button>
@@ -26,7 +26,7 @@
         const logDiv = document.getElementById('log');
 
         // ==========================================
-        // ⚙️ 藍牙與手把狀態變數
+        // 藍牙與手把狀態變數
         // ==========================================
         let bleCharacteristic = null; // 用來儲存 Pico 2W 的藍牙寫入管道
         
@@ -39,12 +39,12 @@
         }
 
         // ==========================================
-        // 🔵 Web Bluetooth API 連線實作
+        // Web Bluetooth API 連線實作
         // ==========================================
         connectBle.addEventListener('click', async () => {
             addLog("正在尋找藍牙名稱為 [Pico-D] 的裝置...");
             try {
-                // 🎯 這裡的 UUID 完美對齊 MicroPython 封裝庫 BLESimplePeripheral 的標準定義
+                // 這裡的 UUID 與 MicroPython 封裝庫 BLESimplePeripheral 的標準定義必須要對應到
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ name: 'Pico-D' }],
                     optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
@@ -59,9 +59,9 @@
                 // 獲取寫入特徵值 (RX)
                 bleCharacteristic = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
                 
-                bleStatusDiv.innerText = "藍牙狀態：🎉 Pico-D 已無線連接！";
+                bleStatusDiv.innerText = "藍牙狀態：Pico-D 已無線連接！";
                 bleStatusDiv.style.color = "green";
-                addLog("🎉 網頁與 Pico 2W 藍牙無線通訊全線打通！");
+                addLog("網頁與 Pico 2W 藍牙無線通訊全線打通！");
             } catch (error) {
                 bleStatusDiv.innerText = "藍牙狀態：連線失敗";
                 bleStatusDiv.style.color = "red";
@@ -70,7 +70,7 @@
         });
 
         // ==========================================
-        // 🎮 Gamepad API 手把監聽實作
+        // Gamepad API 手把監聽實作
         // ==========================================
         window.addEventListener("gamepadconnected", (e) => {
             statusDiv.innerText = `目前狀態：已連線至 ${e.gamepad.id}`;
@@ -90,7 +90,7 @@
         });
 
         // ==========================================
-        // 🔁 核心時脈控制迴圈：結合邊緣觸發與無線發送
+        // 核心時脈控制迴圈：結合邊緣觸發與無線發送
         // ==========================================
         function updateLoop() {
             const gamepads = navigator.getGamepads();
@@ -100,15 +100,15 @@
             if (gp) {
                 let currentCommand = "reset"; // 預設沒有按鍵按下時，狀態為 reset
 
-                // 💡 映射你的黃綠紅藍四大經典色燈對應按鍵
+                // 映射黃綠紅藍四個顏色的色燈對應按鍵
                 if (gp.buttons[0].pressed) {
-                    currentCommand = "cross";     // ╳ 鍵 -> 驅動藍燈 + C4
+                    currentCommand = "cross";     // x 鍵 -> 驅動藍燈 
                 } else if (gp.buttons[1].pressed) {
-                    currentCommand = "circle";    // ○ 鍵 -> 驅動紅燈 + E4
+                    currentCommand = "circle";    // o 鍵 -> 驅動紅燈
                 } else if (gp.buttons[2].pressed) {
-                    currentCommand = "square";    // ▢ 鍵 -> 驅動黃燈 + C5
+                    currentCommand = "square";    // ▢ 鍵 -> 驅動黃燈
                 } else if (gp.buttons[3].pressed) {
-                    currentCommand = "triangle";  // △ 鍵 -> 驅動綠燈 + G4
+                    currentCommand = "triangle";  // ▲ 鍵 -> 驅動綠燈 
                 }
 
                 // ⚡ 實施防禦性狀態機防抖：只有在「按鍵狀態改變」的瞬間才處理

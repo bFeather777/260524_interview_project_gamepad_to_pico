@@ -2,7 +2,7 @@ const HID = require('node-hid');
 const noble = require('@abandonware/noble');
 
 // ==========================================
-// ⚙️ 參數設定區
+// 參數設定區
 // ==========================================
 const PS4_VENDOR_ID = 1356;
 const PS4_PRODUCT_ID = 2508;
@@ -10,13 +10,13 @@ const PS4_PRODUCT_ID = 2508;
 // 對齊 Pico 2W 上的 BLE 服務與特徵值 UUID (Nordic UART 標準)
 const SERVICE_UUID = '6e400001b5a3f393e0a9e50e24dcca9e';
 const RX_CHAR_UUID = '6e400002b5a3f393e0a9e50e24dcca9e';
-const PICO_NAME = 'Pico-D'; // 對齊你 Python 裡定義的名稱
+const PICO_NAME = 'Pico-D'; // Pico的名稱從這邊修改
 
 let bleCharacteristic = null;
 let ps4Device = null;
 
 // ==========================================
-// 🔵 藍牙 BLE 連線邏輯
+// 藍牙 BLE 連線邏輯
 // ==========================================
 console.log("正在啟動 Mac 藍牙掃描...");
 
@@ -31,7 +31,7 @@ noble.on('stateChange', async (state) => {
 });
 
 noble.on('discover', async (peripheral) => {
-    // 檢查設備名稱是否為 Pico-D
+    // 檢查設備名稱是否為 PICO_NAME 設定的名稱
     if (peripheral.advertisement.localName === PICO_NAME) {
         console.log(`成功找到目標裝置: ${peripheral.advertisement.localName}! 正在連接...`);
         await noble.stopScanningAsync();
@@ -44,7 +44,7 @@ noble.on('discover', async (peripheral) => {
         
         console.log('🎉 Pico 2W 藍牙通訊全線打通！');
         
-        // 藍牙成功後，才啟動手把監聽，確保防禦性順序
+        // 藍牙成功後，才啟動手把監聽
         startJoystickListening();
     }
 });
@@ -69,15 +69,15 @@ function startJoystickListening() {
             const buttonByte = data[5];
             let currentCommand = "reset"; // 預設放開按鍵時為 reset
 
-            // 解開 PS4 特定的狀態數值（以下為標準 HID 對應值，你可以按住按鍵對照你的 console.log 調整）
+            // 解開 PS4 特定的狀態數值
             if ((buttonByte & 0x20) === 0x20) {
-                currentCommand = "cross";     // ╳ 鍵 (通常是 32 或與其結合的值)
+                currentCommand = "cross";     // x 鍵 (通常是 32 或與其結合的值)
             } else if ((buttonByte & 0x40) === 0x40) {
-                currentCommand = "circle";    // ⭕ 鍵 (通常是 64)
+                currentCommand = "circle";    // o 鍵 (通常是 64)
             } else if ((buttonByte & 0x10) === 0x10) {
-                currentCommand = "square";    // ▢ 鍵 (通常是 16)
+                currentCommand = "square";    // ☐ 鍵 (通常是 16)
             } else if ((buttonByte & 0x80) === 0x80) {
-                currentCommand = "triangle";  // 🔺 鍵 (通常是 128)
+                currentCommand = "triangle";  // ▲ 鍵 (通常是 128)
             }
 
             // ⚡ 實施防禦性防抖：只有在「按鍵狀態改變」的瞬间才發送 Token
