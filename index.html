@@ -9,10 +9,10 @@
 <body>
 
     <h1>PS4 手把控制平台 (Web 端全無線整合)</h1>
-    <p>請先確保 PS4 手把已與 Mac 連線，且 Pico-D 藍牙已啟動。</p>
+    <p>請先確保 PS4 手把已與 MacBook 或平板連線，且 Pico-D 藍牙已啟動。</p>
     
     <button id="connectBtn">1. 偵測並連接手把</button>
-    <button id="connectBle" style="background-color: #007bff; color: white;">2. 連接藍牙手把箱 (Pico-D)</button>
+    <button id="connectBle" style="background-color: #007bff; color: white;">2. 連接藍牙pico2w電路</button>
 
     <div id="status">目前狀態：等待連線...</div>
     <div id="bleStatus" style="margin-top: 10px; font-weight: bold; color: orange;">藍牙狀態：未連線</div>
@@ -102,16 +102,16 @@
 
                 // 映射黃綠紅藍四個顏色的色燈對應按鍵
                 if (gp.buttons[0].pressed) {
-                    currentCommand = "cross";     // x 鍵 -> 驅動藍燈 
+                    currentCommand = "cross";     // x 鍵 -> 驅動黃燈 
                 } else if (gp.buttons[1].pressed) {
                     currentCommand = "circle";    // o 鍵 -> 驅動紅燈
                 } else if (gp.buttons[2].pressed) {
-                    currentCommand = "square";    // ▢ 鍵 -> 驅動黃燈
+                    currentCommand = "square";    // ▢ 鍵 -> 驅動藍燈
                 } else if (gp.buttons[3].pressed) {
                     currentCommand = "triangle";  // ▲ 鍵 -> 驅動綠燈 
                 }
 
-                // ⚡ 實施防禦性狀態機防抖：只有在「按鍵狀態改變」的瞬間才處理
+                // 實施防禦性狀態機防抖：只有在「按鍵狀態改變」的瞬間才處理
                 if (currentCommand !== lastCommand) {
                     lastCommand = currentCommand;
                     
@@ -121,7 +121,7 @@
                         addLog(`【手把致動】放開按鍵 (發送 reset)`);
                     }
                     
-                    // 🚀 將指令隔空發送給 Pico 2W
+                    // 將指令隔空發送給 Pico 2W
                     sendTokenViaBluetooth(currentCommand);
                 }
             }
@@ -129,7 +129,7 @@
         }
 
         // ==========================================
-        // 🚀 傳送純文字 Token 給 Pico 的封裝函數
+        // 傳送純文字 Token 給 Pico 的封裝函數
         // ==========================================
         function sendTokenViaBluetooth(commandStr) {
             if (!bleCharacteristic) {
