@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PS4 手把無線通訊測試中台</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>PS4 手把控制中台 (Web 端全無線整合)</h1>
+    <p>請先確保 PS4 手把已與 Mac 連線，且 Pico-D 藍牙已啟動。</p>
+    
+    <button id="connectBtn">1. 偵測並連接手把</button>
+    <button id="connectBle" style="background-color: #007bff; color: white;">2. 連接藍牙手把箱 (Pico-D)</button>
+
+    <div id="status">目前狀態：等待連線...</div>
+    <div id="bleStatus" style="margin-top: 10px; font-weight: bold; color: orange;">藍牙狀態：未連線</div>
+    <div id="log" style="height: 300px; overflow-y: auto; background: #222; color: #fff; padding: 10px; font-family: monospace; margin-top: 15px; border-radius: 5px;">=== 系統 Log 視窗 ===<br></div>
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const connectBle = document.getElementById('connectBle');
+        const statusDiv = document.getElementById('status');
+        const bleStatusDiv = document.getElementById('bleStatus');
+        const logDiv = document.getElementById('log');
+
+        // ==========================================
+        // ⚙️ 藍牙與手把狀態變數
+        // ==========================================
+        let bleCharacteristic = null; // 用來儲存 Pico 2W 的藍牙寫入管道
+        
+        // 用於手把按鍵的「邊緣觸發（防抖）」旗標，防止 log 與通訊被重複資料塞爆
+        let lastCommand = "reset"; 
+
+        function addLog(message) {
+            logDiv.innerHTML += `[${new Date().toLocaleTimeString()}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // ==========================================
+        // 🔵 Web Bluetooth API 連線實作
+        // ==========================================
+        connectBle.addEventListener('click', async () => {
+            addLog("正在尋找藍牙名稱為 [Pico-D] 的裝置...");
+            try {
+                // 🎯 這裡的 UUID 完美對齊 MicroPython 封裝庫 BLESimplePeripheral 的標準定義
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Pico-D' }],
+                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+                });
+
+                bleStatusDiv.innerText = `藍牙狀態：正在連接 ${device.name}...`;
+                const server = await device.gatt.connect();
+                
+                addLog("成功連接 GATT 伺服器，正在獲取 Nordic UART 服務...");
+                const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+                
+                // 獲取寫入特徵值 (RX)
+                bleCharacteristic = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+                
+                bleStatusDiv.innerText = "藍牙狀態：🎉 Pico-D 已無線連接！";
+                bleStatusDiv.style.color = "green";
+                addLog("🎉 網頁與 Pico 2W 藍牙無線通訊全線打通！");
+            } catch (error) {
+                bleStatusDiv.innerText = "藍牙狀態：連線失敗";
+                bleStatusDiv.style.color = "red";
+                addLog(`藍牙連線失敗: ${error.message}`);
+            }
+        });
+
+        // ==========================================
+        // 🎮 Gamepad API 手把監聽實作
+        // ==========================================
+        window.addEventListener("gamepadconnected", (e) => {
+            statusDiv.innerText = `目前狀態：已連線至 ${e.gamepad.id}`;
+            statusDiv.style.color = "green";
+            addLog(`手把連線成功！設備名稱: ${e.gamepad.id}`);
+            updateLoop();
+        });
+
+        window.addEventListener("gamepaddisconnected", (e) => {
+            statusDiv.innerText = "目前狀態：手把已斷開連線";
+            statusDiv.style.color = "red";
+            addLog("手把連線已中斷。");
+        });
+
+        connectBtn.addEventListener('click', async () => {
+            addLog("正在偵測手把...請按壓 PS4 手把上的任意按鈕（如 ╳ 或 ○）來啟動瀏覽器偵測。");
+        });
+
+        // ==========================================
+        // 🔁 核心時脈控制迴圈：結合邊緣觸發與無線發送
+        // ==========================================
+        function updateLoop() {
+            const gamepads = navigator.getGamepads();
+            if (!gamepads) return;
+
+            const gp = gamepads[0]; 
+            if (gp) {
+                let currentCommand = "reset"; // 預設沒有按鍵按下時，狀態為 reset
+
+                // 💡 映射你的黃綠紅藍四大經典色燈對應按鍵
+                if (gp.buttons[0].pressed) {
+                    currentCommand = "cross";     // ╳ 鍵 -> 驅動藍燈 + C4
+                } else if (gp.buttons[1].pressed) {
+                    currentCommand = "circle";    // ○ 鍵 -> 驅動紅燈 + E4
+                } else if (gp.buttons[2].pressed) {
+                    currentCommand = "square";    // ▢ 鍵 -> 驅動黃燈 + C5
+                } else if (gp.buttons[3].pressed) {
+                    currentCommand = "triangle";  // △ 鍵 -> 驅動綠燈 + G4
+                }
+
+                // ⚡ 實施防禦性狀態機防抖：只有在「按鍵狀態改變」的瞬間才處理
+                if (currentCommand !== lastCommand) {
+                    lastCommand = currentCommand;
+                    
+                    if (currentCommand !== "reset") {
+                        addLog(`【手把致動】觸發按鍵: ${currentCommand}`);
+                    } else {
+                        addLog(`【手把致動】放開按鍵 (發送 reset)`);
+                    }
+                    
+                    // 🚀 將指令隔空發送給 Pico 2W
+                    sendTokenViaBluetooth(currentCommand);
+                }
+            }
+            requestAnimationFrame(updateLoop);
+        }
+
+        // ==========================================
+        // 🚀 傳送純文字 Token 給 Pico 的封裝函數
+        // ==========================================
+        function sendTokenViaBluetooth(commandStr) {
+            if (!bleCharacteristic) {
+                addLog(`[通訊提示] 藍牙未連線，攔截發送指令: ${commandStr}`);
+                return;
+            }
+            
+            // 將文字（例如 "cross"）轉成 UTF-8 的二進位 ArrayBuffer
+            const encoder = new TextEncoder();
+            const dataBuffer = encoder.encode(commandStr);
+            
+            // 透過藍牙發射出去（採用無應答高頻寬模式，降低延遲）
+            bleCharacteristic.writeValueWithoutResponse(dataBuffer)
+                .catch(err => console.error("藍牙發送失敗:", err));
+        }
+    </script>
+</body>
+</html>
