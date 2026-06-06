@@ -50,7 +50,7 @@ noble.on('discover', async (peripheral) => {
 });
 
 // ==========================================
-// 🎮 PS4 手把監聽與數據映射
+// PS4 手把監聽與數據映射
 // ==========================================
 function startJoystickListening() {
     console.log("正在尋找 PS4 手把...");
@@ -62,8 +62,7 @@ function startJoystickListening() {
         let lastCommand = "";
 
         ps4Device.on("data", (data) => {
-            // 💡 核心解密：PS4 原始數據流的二進位位元遮罩（Bitmask）
-            // 在大多數 MacOS 藍牙/有線模式下，主要的四顆幾何按鍵藏在 data[5]
+            // PS4 原始數據流的二進位位元遮罩（Bitmask）
             // 低 4 位元 (Low 4 bits) 代表十字鍵，高 4 位元 (High 4 bits) 代表幾何鍵
             
             const buttonByte = data[5];
@@ -71,16 +70,16 @@ function startJoystickListening() {
 
             // 解開 PS4 特定的狀態數值
             if ((buttonByte & 0x20) === 0x20) {
-                currentCommand = "cross";     // x 鍵 (通常是 32 或與其結合的值)
+                currentCommand = "cross";     // x 鍵 
             } else if ((buttonByte & 0x40) === 0x40) {
-                currentCommand = "circle";    // o 鍵 (通常是 64)
+                currentCommand = "circle";    // o 鍵 
             } else if ((buttonByte & 0x10) === 0x10) {
-                currentCommand = "square";    // ☐ 鍵 (通常是 16)
+                currentCommand = "square";    // ☐ 鍵 
             } else if ((buttonByte & 0x80) === 0x80) {
-                currentCommand = "triangle";  // ▲ 鍵 (通常是 128)
+                currentCommand = "triangle";  // ▲ 鍵 
             }
 
-            // ⚡ 實施防禦性防抖：只有在「按鍵狀態改變」的瞬间才發送 Token
+            // 實施防禦性防抖：只有在「按鍵狀態改變」的瞬間才發送 Token
             if (currentCommand !== lastCommand) {
                 lastCommand = currentCommand;
                 sendBleToken(currentCommand);
@@ -97,7 +96,7 @@ function startJoystickListening() {
 }
 
 // ==========================================
-// 🚀 傳送指令給 Pico 的封裝函數
+// 傳送指令給 Pico 的封裝函數
 // ==========================================
 function sendBleToken(commandStr) {
     if (!bleCharacteristic) {
